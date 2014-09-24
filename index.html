@@ -1,0 +1,170 @@
+<!doctype html>
+    <html>
+        <head>
+            <script src="/socket.io/socket.io.js"></script>
+            <script src="/resource/js/jquery-1.11.1.min.js"></script>
+            <link rel="stylesheet" type="text/css" href="/resource/css/style.css">
+            <script type="text/javascript">
+                $(document).ready(function(){
+                    if (connect()) {
+                        listenServer();
+                        var parameters = window.location.search;
+                        
+                        var ibeacon = parameters.split("?ibeacon=")[1];
+                        //console.log(ibeacon);
+                        if (ibeacon != null && ibeacon != "") {
+                            registerBeacon(ibeacon);
+                        }
+                        
+                        
+                    }
+                    });
+                //function socket
+                var socket;
+                function connect(){
+                    socket = io.connect("localhost:3000");
+                    if (socket) {
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }
+                function registerBeacon(ibeacon){
+                    socket.emit('event-client-action',{action:'registerBeacon' , data:{ibeacon: ibeacon}});
+                }
+                function listenServer(){
+                    socket.on('event-server-news',function(data){
+                        switch (data.action) {
+                            case "responseConnection":
+                                if (data.data.isSuccess == 1) {
+                                    $("#connect_status").html("Connected");
+                                }
+                                
+                                break;
+                            case "responseRegisterBeacon":
+                                if (data.data.isSuccess == 1) {
+                                    $("#register_status").html("Registered");
+                                    var beacon = data.data.beacon;
+                                   
+                                    $("#ibeacon_info").append("<p class='ibeacon_id'><span>id:</span>"+beacon.id+"</p>");
+                                    $("#ibeacon_info").append("<p class='ibeacon_uuid'><span>uuid:</span>"+beacon.uuid+"</p>");
+                                    $("#ibeacon_info").append("<p class='ibeacon_major'><span>major:</span>"+beacon.major+"</p>");
+                                    $("#ibeacon_info").append("<p class='ibeacon_minor'><span>minor:</span>"+beacon.minor+"</p>");
+                                    
+                                }
+                                break;
+                            case "sendLink":
+                                var link = data.data.link;
+                                if (link != null && link != "") {
+                                    addLink(link);
+                                }
+                            default:
+                                break;
+                        }
+                        });
+                }
+                //function design
+                function addLink(link){
+                    if (checkImageURL(link) ) {
+                        var div_img = "<div class='image'>";
+                        div_img += "<img src='http://corp.qliktag.com/wp-content/uploads/2014/03/ibeacon.jpg' />";
+                        div_img += "</div>";
+                        $(".content").prepend(div_img);
+                    }else {
+                        checkYoutubeURL(link);
+                    }
+                }
+                function checkImageURL(url) {
+                    return(url.match(/\.(jpeg|jpg|gif|png)$/) != null);
+                }
+                function checkYoutubeURL(url){
+                    var element_a = document.createElement('a');
+                    element_a.href = url;
+                    var hostname = element_a.hostname;
+                    
+                    if (hostname == "youtube.com" || hostname == "www.youtube.com") {
+                        var youtube_id = element_a.search;
+                        youtube_id = youtube_id.split("?v=");
+                        if (youtube_id.length > 1) {
+                            youtube_id = youtube_id[1];
+                            var div_video = "<div class='video'>";
+                            div_video += "<iframe width='853' height='480'  src='//www.youtube.com/embed/"+youtube_id+"?rel=0&autoplay=1&autohide=1' frameborder='0' allowfullscreen></iframe>";
+                            div_video += "</div>";
+                            $(".content").prepend(div_video);
+                        }
+                        
+                        
+                    }else if (hostname == "youtu.be") {
+                        var pathname = element_a.pathname;
+                        pathname = pathname.split("/");
+                       
+                       
+                        if (pathname.length > 1) {
+                            var youtube_id = pathname[1];
+                            console.log("pathname: "+pathname);
+                            var div_video = "<div class='video'>";
+                            div_video += "<iframe width='853' height='480'  src='//www.youtube.com/embed/"+youtube_id+"?rel=0&autoplay=1&autohide=1' frameborder='0' allowfullscreen></iframe>";
+                            div_video += "</div>";
+                            $(".content").prepend(div_video);
+                        }
+                        
+                         
+                    }
+                }
+                function getHostName(url) {
+                    var match = url.match(/:\/\/(www[0-9]?\.)?(.[^/:]+)/i);
+                    if (match != null && match.length > 2 &&
+                        typeof match[2] === 'string' && match[2].length > 0) {
+                    return match[2];
+                    }
+                    else {
+                        return null;
+                    }
+                }
+                function getDomain(url) {
+                    var hostName = getHostName(url);
+                    var domain = hostName;
+                    
+                    if (hostName != null) {
+                        var parts = hostName.split('.').reverse();
+                        
+                    if (parts != null && parts.length > 1) {
+                        domain = parts[1] + '.' + parts[0];
+                            
+                        if (hostName.toLowerCase().indexOf('.co.uk') != -1
+                                && parts.length > 2) {
+                          domain = parts[2] + '.' + domain;
+                        }
+                    }
+                    }
+                    
+                    return domain;
+                }
+                function getURLParameter(name) {
+                    return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null
+                  }
+            </script>
+        </head>
+        <body>
+            <div class="main">
+                <div class="left">
+                    <p id="connect_status">Connecting...</p>
+                    <p id="register_status">...</p>
+                    <div id="ibeacon_info"><p>-= IBeacon Info =-</p></div>
+                    
+                </div>
+                <div class="center">
+                    <div class="content">
+                        <!--
+                        <div class="image">
+                            <img src="http://corp.qliktag.com/wp-content/uploads/2014/03/ibeacon.jpg" />
+                        </div>
+                        <div class="video">
+                            <iframe width="853" height="480"  src="//www.youtube.com/embed/D392TitSE4k?rel=0&autoplay=1&autohide=1" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                        --> 
+                    </div>
+                </div>
+            </div>
+        </body>
+    </html>
